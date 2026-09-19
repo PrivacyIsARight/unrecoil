@@ -37,9 +37,6 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Detach checkout from branch
-        run: git checkout --detach HEAD
-
       - name: Create new annotated tag
         if: inputs.new-tag != ''
         env:
@@ -52,12 +49,25 @@ jobs:
 
       - name: Get release tag
         id: release-tag
+        shell: bash
         run: |
+          set -euo pipefail
+
+          # Prefer an exact tag if HEAD already points at one.
           if git describe --exact-match --tags HEAD >/dev/null 2>&1; then
             echo "tag_name=$(git describe --exact-match --tags HEAD)" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag_name=$(git describe --tags --abbrev=7 --always)" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+
+          # If the user provided a tag, use it.
+          if [ -n "${{ inputs.new-tag }}" ]; then
+            echo "tag_name=${{ inputs.new-tag }}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Otherwise fail instead of producing a malformed version string.
+          echo "::error::No valid release tag exists at HEAD. Supply a new-tag value or create a tag first."
+          exit 1
 
   build-engine:
     needs: get-tag
@@ -78,8 +88,10 @@ jobs:
           submodules: recursive
           path: src
 
-      - name: Detach checkout from branch
-        run: git -C src checkout --detach HEAD
+      - name: Ensure clean detached checkout at tagged commit
+        run: |
+          git -C src fetch --tags --force
+          git -C src checkout --detach HEAD
 
       - name: Build engine
         env:
