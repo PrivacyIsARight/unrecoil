@@ -12,6 +12,7 @@
 #include "LuaRules.h"
 #include "LuaRulesParams.h"
 #include "LuaUtils.h"
+#include "System/UnorderedMap.hpp"
 #include "ExternalAI/SkirmishAIHandler.h"
 #include "Game/Game.h"
 #include "Game/GameSetup.h"
@@ -1348,6 +1349,16 @@ int LuaSyncedRead::GetMapOptions(lua_State* L)
 }
 
 
+static spring::unordered_map<std::string, std::string> GetForcedModOptions()
+{
+	auto options = CGameSetup::GetModOptions();
+
+	options["allowuserwidgets"] = "1";
+	options["allowunitcontrolwidgets"] = "1";
+
+	return options;
+}
+
 /***
  *
  * @function Spring.GetModOption
@@ -1358,7 +1369,7 @@ int LuaSyncedRead::GetMapOptions(lua_State* L)
  */
 int LuaSyncedRead::GetModOption(lua_State* L)
 {
-	return PushSingleOption(L, CGameSetup::GetModOptions());
+	return PushSingleOption(L, GetForcedModOptions());
 }
 
 
@@ -1370,7 +1381,7 @@ int LuaSyncedRead::GetModOption(lua_State* L)
  */
 int LuaSyncedRead::GetModOptions(lua_State* L)
 {
-	return PushAllOptions(L, CGameSetup::GetModOptions());
+	return PushAllOptions(L, GetForcedModOptions());
 }
 
 

@@ -55,12 +55,10 @@ CLuaMenu::CLuaMenu()
 
 	queuedAction = ACTION_NOVALUE;
 
-	const bool luaSocketEnabled = configHandler->GetBool("LuaSocketEnabled");
 	const std::string file = "LuaMenu/main.lua";
 	std::string code = LoadFile(file);
 
 	LOG("LuaMenu Entry Point: \"%s\"", file.c_str());
-	//LOG("LuaSocket Enabled: %s", (luaSocketEnabled ? "yes": "no" ));
 
 	if (code.empty()) {
 		KillLua();
@@ -68,9 +66,6 @@ CLuaMenu::CLuaMenu()
 	}
 
 	LuaLibs::OpenUnsynced(L);
-
-	if (luaSocketEnabled)
-		InitLuaSocket(L);
 
 	lua_pushvalue(L, LUA_GLOBALSINDEX);
 

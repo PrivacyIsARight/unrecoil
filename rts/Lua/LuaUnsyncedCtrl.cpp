@@ -3809,18 +3809,18 @@ int LuaUnsyncedCtrl::SetBuildFacing(lua_State* L)
  */
 int LuaUnsyncedCtrl::SendLuaUIMsg(lua_State* L)
 {
-	const std::string msg = luaL_checksstring(L, 1);
-	const std::vector<std::uint8_t> data(msg.begin(), msg.end());
+	luaL_checklstring(L, 1, nullptr);
 
 	const char* mode = luaL_optstring(L, 2, "");
 
 	if (mode[0] != 0 && mode[0] != 'a' && mode[0] != 's')
 		luaL_error(L, "Unknown SendLuaUIMsg() mode");
 
-	try {
-		clientNet->Send(CBaseNetProtocol::Get().SendLuaMsg(gu->myPlayerNum, LUA_HANDLE_ORDER_UI, mode[0], data));
-	} catch (const netcode::PackPacketException& ex) {
-		luaL_error(L, "SendLuaUIMsg() packet error: %s", ex.what());
+	static bool warned = false;
+
+	if (!warned) {
+		warned = true;
+		LOG_L(L_WARNING, "Spring.SendLuaUIMsg() disabled: LuaMsg wire relay to host/autohost stripped");
 	}
 
 	return 0;
@@ -3833,13 +3833,13 @@ int LuaUnsyncedCtrl::SendLuaUIMsg(lua_State* L)
  */
 int LuaUnsyncedCtrl::SendLuaGaiaMsg(lua_State* L)
 {
-	const std::string msg = luaL_checksstring(L, 1);
-	const std::vector<std::uint8_t> data(msg.begin(), msg.end());
+	luaL_checklstring(L, 1, nullptr);
 
-	try {
-		clientNet->Send(CBaseNetProtocol::Get().SendLuaMsg(gu->myPlayerNum, LUA_HANDLE_ORDER_GAIA, 0, data));
-	} catch (const netcode::PackPacketException& ex) {
-		luaL_error(L, "SendLuaGaiaMsg() packet error: %s", ex.what());
+	static bool warned = false;
+
+	if (!warned) {
+		warned = true;
+		LOG_L(L_WARNING, "Spring.SendLuaGaiaMsg() disabled: LuaMsg wire relay to host/autohost stripped");
 	}
 
 	return 0;
@@ -3852,14 +3852,15 @@ int LuaUnsyncedCtrl::SendLuaGaiaMsg(lua_State* L)
  */
 int LuaUnsyncedCtrl::SendLuaRulesMsg(lua_State* L)
 {
-	const std::string msg = luaL_checksstring(L, 1);
-	const std::vector<std::uint8_t> data(msg.begin(), msg.end());
+	luaL_checklstring(L, 1, nullptr);
 
-	try {
-		clientNet->Send(CBaseNetProtocol::Get().SendLuaMsg(gu->myPlayerNum, LUA_HANDLE_ORDER_RULES, 0, data));
-	} catch (const netcode::PackPacketException& ex) {
-		luaL_error(L, "SendLuaRulesMsg() packet error: %s", ex.what());
+	static bool warned = false;
+
+	if (!warned) {
+		warned = true;
+		LOG_L(L_WARNING, "Spring.SendLuaRulesMsg() disabled: LuaMsg wire relay to host/autohost stripped");
 	}
+
 	return 0;
 }
 

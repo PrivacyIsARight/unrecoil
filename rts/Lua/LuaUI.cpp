@@ -45,7 +45,7 @@
 #include <cctype>
 
 CONFIG(bool, LuaSocketEnabled)
-	.defaultValue(true)
+	.defaultValue(false)
 	.description("Enable LuaSocket support, allows Lua widgets to make TCP/UDP connections")
 	.readOnly(true)
 ;
@@ -87,14 +87,11 @@ CLuaUI::CLuaUI()
 	shockFrontMinPower = 0.0f;
 	shockFrontDistAdj  = 100.0f;
 
-	const bool luaSocketEnabled = configHandler->GetBool("LuaSocketEnabled");
-
 	const std::string mode = (CLuaHandle::GetDevMode()) ? SPRING_VFS_RAW_FIRST : SPRING_VFS_MOD;
 	const std::string file = (CFileHandler::FileExists("luaui.lua", mode) ? "luaui.lua": "LuaUI/main.lua");
 	std::string code = LoadFile(file, mode);
 
 	LOG("LuaUI Entry Point: \"%s\"", file.c_str());
-	LOG("LuaSocket Support: %s", (luaSocketEnabled? "enabled": "disabled"));
 
 	if (code.empty()) {
 		KillLua();
@@ -102,9 +99,6 @@ CLuaUI::CLuaUI()
 	}
 
 	LuaLibs::OpenUnsynced(L);
-
-	if (luaSocketEnabled)
-		InitLuaSocket(L);
 
 	lua_pushvalue(L, LUA_GLOBALSINDEX);
 
