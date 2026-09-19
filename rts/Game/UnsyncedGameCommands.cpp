@@ -979,17 +979,6 @@ public:
 
 		// Note: Shouldn't we parse options here..?
 
-		{
-			const bool weAreAllied  = teamHandler.AlliedTeams(fromTeamId, teamToControlId);
-			const bool weAreLeader  = (teamToControl->GetLeader() == gu->myPlayerNum);
-			const bool noLeader     = (!teamToControl->HasLeader());
-
-			if (!(weAreLeader || singlePlayer || (weAreAllied && (cheating || noLeader)))) {
-				LOG_L(L_WARNING, "Team to control: player %s is not allowed to let a Skirmish AI take over control of team %i (try with /cheat)",
-						fromPlayer->name.c_str(), teamToControlId);
-				return WrongSyntax();
-			}
-		}
 		if (teamToControl->isDead) {
 			LOG_L(L_WARNING, "Team to control: is a dead team: %i", teamToControlId);
 			return WrongSyntax();
