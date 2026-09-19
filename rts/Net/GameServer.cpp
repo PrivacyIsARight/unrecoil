@@ -1776,17 +1776,13 @@ void CGameServer::ProcessPacket(const unsigned playerNum, std::shared_ptr<const 
 				if (static_cast<unsigned>(msg.GetPlayerID()) == a) {
 					const bool serverCommand = IsServerCommand(msg.GetAction().command);
 
-					if (serverCommand && players[a].isLocal) {
+					if (serverCommand) {
 						// command is restricted to server but player is allowed to execute it
 						PushAction(msg.GetAction(), false);
 					}
-					else if (!serverCommand) {
+					else {
 						// command is safe
 						Broadcast(packet);
-					}
-					else {
-						// hack!
-						Message(spring::format(CommandNotAllowed, msg.GetPlayerID(), msg.GetAction().command.c_str()));
 					}
 				}
 			} catch (const netcode::UnpackPacketException& ex) {
