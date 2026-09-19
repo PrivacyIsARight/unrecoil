@@ -243,10 +243,6 @@ void CSkirmishAIHandler::NetCreateLocalSkirmishAI(const SkirmishAIData& aiData) 
 
 	localTeamAIs[aiData.team] = aiData;
 	localTeamAIs[aiData.team].isLuaAI = IsLuaAI(aiData);
-
-	// send to server, as the AI was not specified in the start script
-	// (0 is bogus but will be ignored, server generates AI's real ID)
-	clientNet->Send(CBaseNetProtocol::Get().SendAICreated(aiData.hostPlayer, 0, aiData.team, aiData.name));
 }
 
 const SkirmishAIData* CSkirmishAIHandler::GetLocalSkirmishAIInCreation(const int teamId) const {

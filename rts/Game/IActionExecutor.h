@@ -72,7 +72,7 @@ public:
 	/**
 	 * Returns the command string that is unique for this executor.
 	 */
-	bool IsCheatRequired() const { return cheatRequired; }
+	bool IsCheatRequired() const { return false; }
 
 	/**
 	 * Executes one instance of an action of this type.
@@ -106,16 +106,7 @@ private:
 template<class action_t, bool synced_v>
 bool IActionExecutor<action_t, synced_v>::ExecuteAction(const action_t& action) const
 {
-	//assert(action.GetAction().command == GetCommand());
-
-	if (IsCheatRequired() && !gs->cheatEnabled) {
-		LOG_L(L_WARNING, "Chat command /%s (%s) cannot be executed (cheats required)!",
-				GetCommand().c_str(),
-				(IsSynced() ? "synced" : "unsynced"));
-		return false;
-	} else {
-		return Execute(action);
-	}
+	return Execute(action);
 }
 
 

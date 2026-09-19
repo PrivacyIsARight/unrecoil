@@ -67,6 +67,8 @@ CLuaMenu::CLuaMenu()
 
 	LuaLibs::OpenUnsynced(L);
 
+	InitLuaSocket(L);
+
 	lua_pushvalue(L, LUA_GLOBALSINDEX);
 
 	AddBasicCalls(L); // into Global
