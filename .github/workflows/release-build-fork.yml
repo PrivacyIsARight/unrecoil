@@ -35,6 +35,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          fetch-tags: true
+
+      - name: Detach checkout from branch
+        run: git checkout --detach HEAD
+
       - name: Create new annotated tag
         if: inputs.new-tag != ''
         env:
@@ -44,13 +49,14 @@ jobs:
           git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
           git tag -a -m "Version $NEW_TAG" "$NEW_TAG"
           git push origin tag "$NEW_TAG"
+
       - name: Get release tag
         id: release-tag
         run: |
-          if git describe --exact-match HEAD >/dev/null 2>&1; then
-            echo "tag_name=$(git describe --exact-match HEAD)" >> "$GITHUB_OUTPUT"
+          if git describe --exact-match --tags HEAD >/dev/null 2>&1; then
+            echo "tag_name=$(git describe --exact-match --tags HEAD)" >> "$GITHUB_OUTPUT"
           else
-            echo "tag_name=recoil{$(git rev-parse --abbrev-ref HEAD)}$(git describe --abbrev=7)" >> "$GITHUB_OUTPUT"
+            echo "tag_name=$(git describe --tags --abbrev=7 --always)" >> "$GITHUB_OUTPUT"
           fi
 
   build-engine:
@@ -71,6 +77,10 @@ jobs:
           fetch-tags: true
           submodules: recursive
           path: src
+
+      - name: Detach checkout from branch
+        run: git -C src checkout --detach HEAD
+
       - name: Build engine
         env:
           IMAGE: ghcr.io/beyond-all-reason/recoil-build-${{ matrix.system.target }}
@@ -93,6 +103,7 @@ jobs:
           ${{ inputs.split-debug-info && './split-debug-info.sh' || 'echo "Not splitting debug info."' }}
           ./package.sh
           EOF
+
       - name: Upload engine artifact
         uses: actions/upload-artifact@v4
         with:
@@ -112,6 +123,7 @@ jobs:
           path: artifacts
           pattern: engine-artifacts-*
           merge-multiple: true
+
       - name: Rename artifacts to unrecoil prefix
         run: |
           for f in artifacts/recoil_*.7z; do
@@ -119,6 +131,7 @@ jobs:
             mv "$f" "artifacts/unrecoil_${base#recoil_}"
           done
           ls -la artifacts
+
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
