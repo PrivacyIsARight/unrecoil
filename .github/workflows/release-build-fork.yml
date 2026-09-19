@@ -1,0 +1,127 @@
+# Fork-specific engine release build.
+#
+# The upstream (beyond-all-reason/RecoilEngine) build workflows depend on
+# `nscloud-*` third-party runners that are not available on forks, so they
+# would sit queued forever here. This workflow produces the same artifacts
+# (`recoil_<version>_<platform>.7z`) using the same official build scripts
+# (docker-build-v2/scripts/*) and the same public builder images
+# (ghcr.io/beyond-all-reason/recoil-build-*), but runs on stock GitHub-hosted
+# runners.
+name: Build & Release unrecoil engine
+on:
+  workflow_dispatch:
+    inputs:
+      new-tag:
+        description: 'Create a new annotated release tag, e.g. 2026.09.01. Leave empty to build with the plain git-describe version.'
+        type: string
+        required: false
+      cmake-options:
+        description: 'Custom CMake options passed to configure.sh'
+        type: string
+        required: false
+      split-debug-info:
+        description: 'Split debug info into a separate -dbgsym archive'
+        type: boolean
+        default: false
+
+jobs:
+  get-tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag_name: ${{ steps.release-tag.outputs.tag_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create new annotated tag
+        if: inputs.new-tag != ''
+        env:
+          NEW_TAG: ${{ inputs.new-tag }}
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+          git tag -a -m "Version $NEW_TAG" "$NEW_TAG"
+          git push origin tag "$NEW_TAG"
+      - name: Get release tag
+        id: release-tag
+        run: |
+          if git describe --exact-match HEAD >/dev/null 2>&1; then
+            echo "tag_name=$(git describe --exact-match HEAD)" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag_name=recoil{$(git rev-parse --abbrev-ref HEAD)}$(git describe --abbrev=7)" >> "$GITHUB_OUTPUT"
+          fi
+
+  build-engine:
+    needs: get-tag
+    strategy:
+      matrix:
+        system:
+          - target: amd64-linux
+            image_digest: sha256:31b3667ba0d37620b4ad9b45d1840c8d3e95317f2b233044d2e17697ce8fe61d
+          - target: amd64-windows
+            image_digest: sha256:3ba630ac0c181a95dde522c3a4a81df2302914c7c4e6674e6bde0d4f6bf058ef
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          submodules: recursive
+          path: src
+      - name: Build engine
+        env:
+          IMAGE: ghcr.io/beyond-all-reason/recoil-build-${{ matrix.system.target }}
+          DIGEST: ${{ matrix.system.image_digest }}
+        run: |
+          mkdir -p artifacts
+          docker pull "$IMAGE@$DIGEST"
+          docker run -i --rm \
+            -v /etc/passwd:/etc/passwd:ro \
+            -v /etc/group:/etc/group:ro \
+            --user="$(id -u):$(id -g)" \
+            -v "$(pwd)/src:/build/src:ro" \
+            -v "$(pwd)/artifacts:/build/artifacts:rw" \
+            "$IMAGE@$DIGEST" \
+            bash <<'EOF'
+          set -e
+          cd /build/src/docker-build-v2/scripts
+          ./configure.sh ${{ inputs.cmake-options || '' }}
+          ./compile.sh
+          ${{ inputs.split-debug-info && './split-debug-info.sh' || 'echo "Not splitting debug info."' }}
+          ./package.sh
+          EOF
+      - name: Upload engine artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: engine-artifacts-${{ matrix.system.target }}
+          path: ./artifacts
+          compression-level: 0
+
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    needs: [get-tag, build-engine]
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: engine-artifacts-*
+          merge-multiple: true
+      - name: Rename artifacts to unrecoil prefix
+        run: |
+          for f in artifacts/recoil_*.7z; do
+            base="${f##*/}"
+            mv "$f" "artifacts/unrecoil_${base#recoil_}"
+          done
+          ls -la artifacts
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          tag_name: ${{ needs.get-tag.outputs.tag_name }}
+          name: ${{ needs.get-tag.outputs.tag_name }}
