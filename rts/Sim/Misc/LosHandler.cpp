@@ -711,7 +711,7 @@ void CLosHandler::KillStatic(bool reload)
 void CLosHandler::Init()
 {
 	RECOIL_DETAILED_TRACY_ZONE;
-	globalLOS.fill(false);
+	globalLOS.fill(true);
 
 	baseRadarErrorSize = defBaseRadarErrorSize;
 	baseRadarErrorMult = defBaseRadarErrorMult;
@@ -876,6 +876,9 @@ bool CLosHandler::InLos(const CUnit* unit, int allyTeam) const
 	//      are also in radar ("sonar") coverage if requireSonarUnderWater
 	//      is enabled --> underwater units can NOT BE SEEN AT ALL without
 	//      active radar!
+	if (globalLOS[allyTeam])
+		return true;
+
 	if (modInfo.alwaysVisibleOverridesCloaked) {
 		if (unit->alwaysVisible)
 			return true;
@@ -887,10 +890,6 @@ bool CLosHandler::InLos(const CUnit* unit, int allyTeam) const
 		if (unit->alwaysVisible)
 			return true;
 	}
-
-	// isCloaked always overrides globalLOS
-	if (globalLOS[allyTeam])
-		return true;
 
 	if (unit->useAirLos)
 		return (InAirLos(unit->pos, allyTeam) || InAirLos(unit->pos + unit->speed, allyTeam));
@@ -914,6 +913,9 @@ bool CLosHandler::InAirLos(const CUnit* unit, int allyTeam) const
 	//      are also in radar ("sonar") coverage if requireSonarUnderWater
 	//      is enabled --> underwater units can NOT BE SEEN AT ALL without
 	//      active radar!
+	if (globalLOS[allyTeam])
+		return true;
+
 	if (modInfo.alwaysVisibleOverridesCloaked) {
 		if (unit->alwaysVisible)
 			return true;
@@ -925,10 +927,6 @@ bool CLosHandler::InAirLos(const CUnit* unit, int allyTeam) const
 		if (unit->alwaysVisible)
 			return true;
 	}
-
-	// isCloaked always overrides globalLOS
-	if (globalLOS[allyTeam])
-		return true;
 
 	if (modInfo.requireSonarUnderWater) {
 		if (unit->IsUnderWater() && !InRadar(unit, allyTeam))
