@@ -130,7 +130,7 @@ void HAPFSPathDrawer::UpdateExtraTexture(int extraTex, int starty, int endy, int
 
 						BuildSquareStatus status = FREE;
 
-						if (!losHandler->InLos(pos, gu->myAllyTeam)) {
+						if (!gu->spectatingFullView && !losHandler->InLos(pos, gu->myAllyTeam)) {
 							status = NOLOS;
 						} else {
 							const UnitDef* ud = unitDefHandler->GetUnitDefByID(-guihandler->commands[guihandler->inCommand].id);
@@ -167,7 +167,7 @@ void HAPFSPathDrawer::UpdateExtraTexture(int extraTex, int starty, int endy, int
 							const int sqx = (tx << 1);
 							const int sqy = (ty << 1);
 							const int texIdx = ((ty * (mapDims.pwr2mapx >> 1)) + tx) * 4 - offset;
-							const bool losSqr = losHandler->InLos(SquareToFloat3(sqx, sqy), gu->myAllyTeam);
+							const bool losSqr = gu->spectatingFullView || losHandler->InLos(SquareToFloat3(sqx, sqy), gu->myAllyTeam);
 
 							float scale = 1.0f;
 

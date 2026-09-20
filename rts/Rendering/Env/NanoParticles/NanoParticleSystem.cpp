@@ -374,7 +374,7 @@ namespace {
 		entry.z = z;
 		entry.allyTeam = allyTeam;
 		entry.expiresFrame = frame + vc.losCacheFrames;
-		entry.visible = losHandler->InLos(pos, allyTeam);
+		entry.visible = gu->spectatingFullView || losHandler->InLos(pos, allyTeam);
 		return entry.visible;
 	}
 

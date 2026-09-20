@@ -275,7 +275,7 @@ void CUnitDrawerData::UpdateGhostedBuildings()
 			for (int i = 0; i < dgb.size(); /*no-op*/) {
 				GhostSolidObject* gso = dgb[i];
 
-				if (!losHandler->InLos(gso->pos, allyTeam)) {
+				if (!gu->spectatingFullView && !losHandler->InLos(gso->pos, allyTeam)) {
 					++i;
 					continue;
 				}
