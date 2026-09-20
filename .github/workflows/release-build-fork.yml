@@ -9,10 +9,15 @@
 # runners.
 name: Build & Release unrecoil engine
 on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - latest.json
   workflow_dispatch:
     inputs:
       new-tag:
-        description: 'Create a new annotated release tag, e.g. 2026.09.01. Leave empty to build with the plain git-describe version.'
+        description: 'Create a new annotated release tag, e.g. 2026.09.01. Leave empty to auto-generate the next free date-based tag.'
         type: string
         required: false
       cmake-options:
@@ -53,21 +58,29 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Prefer an exact tag if HEAD already points at one.
           if git describe --exact-match --tags HEAD >/dev/null 2>&1; then
             echo "tag_name=$(git describe --exact-match --tags HEAD)" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          # If the user provided a tag, use it.
           if [ -n "${{ inputs.new-tag }}" ]; then
             echo "tag_name=${{ inputs.new-tag }}" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          # Otherwise fail instead of producing a malformed version string.
-          echo "::error::No valid release tag exists at HEAD. Supply a new-tag value or create a tag first."
-          exit 1
+          year="$(date -u +%Y)"
+          month="$(date -u +%m)"
+          n=$((10#$(date -u +%d)))
+          while git rev-parse -q --verify "refs/tags/${year}.${month}.$(printf '%02d' "$n")" >/dev/null; do
+            n=$((n + 1))
+          done
+          new_tag="${year}.${month}.$(printf '%02d' "$n")"
+
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+          git tag -a -m "Version $new_tag" "$new_tag"
+          git push origin tag "$new_tag"
+          echo "tag_name=$new_tag" >> "$GITHUB_OUTPUT"
 
   build-engine:
     needs: get-tag
@@ -158,6 +171,13 @@ jobs:
       contents: write
     needs: [get-tag, build-engine]
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+          fetch-tags: true
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -179,3 +199,40 @@ jobs:
           files: artifacts/*
           tag_name: ${{ needs.get-tag.outputs.tag_name }}
           name: ${{ needs.get-tag.outputs.tag_name }}
+
+      - name: Update latest.json and push to master
+        run: |
+          set -euo pipefail
+          tag="${{ needs.get-tag.outputs.tag_name }}"
+
+          cat > latest.json <<EOF
+          {
+            "version": "${tag}",
+            "engine": "unrecoil_${tag}-unrecoil",
+            "resources": [
+              {
+                "platform": "linux",
+                "url": "https://github.com/PrivacyIsARight/unrecoil/releases/download/${tag}/unrecoil_${tag}_amd64-linux.7z",
+                "destination": "engine/unrecoil_${tag}-unrecoil",
+                "extract": true
+              },
+              {
+                "platform": "win32",
+                "url": "https://github.com/PrivacyIsARight/unrecoil/releases/download/${tag}/unrecoil_${tag}_amd64-windows.7z",
+                "destination": "engine/unrecoil_${tag}-unrecoil",
+                "extract": true
+              }
+            ]
+          }
+          EOF
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add latest.json
+          if git diff --cached --quiet; then
+            echo "latest.json is already up to date."
+            exit 0
+          fi
+          git commit -s -m "Update latest.json to ${tag}" latest.json
+          git pull --rebase origin master
+          git push origin HEAD:master
