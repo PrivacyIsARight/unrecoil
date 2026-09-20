@@ -16,8 +16,8 @@ on:
       - latest.json
   workflow_dispatch:
     inputs:
-      new-tag:
-        description: 'Create a new annotated release tag, e.g. 2026.09.01. Leave empty to auto-generate the next free date-based tag.'
+      version:
+        description: 'Version the build reports and is released under (default 2026.07.04; must match the servers you join).'
         type: string
         required: false
       cmake-options:
@@ -36,51 +36,26 @@ jobs:
       contents: write
     outputs:
       tag_name: ${{ steps.release-tag.outputs.tag_name }}
+      build_id: ${{ steps.release-tag.outputs.build_id }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Create new annotated tag
-        if: inputs.new-tag != ''
-        env:
-          NEW_TAG: ${{ inputs.new-tag }}
-        run: |
-          git config user.name "${{ github.actor }}"
-          git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
-          git tag -a -m "Version $NEW_TAG" "$NEW_TAG"
-          git push origin tag "$NEW_TAG"
-
-      - name: Get release tag
+      - name: Pin release tag to this commit
         id: release-tag
         shell: bash
+        env:
+          TAG: ${{ inputs.version || '2026.07.04' }}
         run: |
           set -euo pipefail
-
-          if git describe --exact-match --tags HEAD >/dev/null 2>&1; then
-            echo "tag_name=$(git describe --exact-match --tags HEAD)" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          if [ -n "${{ inputs.new-tag }}" ]; then
-            echo "tag_name=${{ inputs.new-tag }}" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          year="$(date -u +%Y)"
-          month="$(date -u +%m)"
-          n=$((10#$(date -u +%d)))
-          while git rev-parse -q --verify "refs/tags/${year}.${month}.$(printf '%02d' "$n")" >/dev/null; do
-            n=$((n + 1))
-          done
-          new_tag="${year}.${month}.$(printf '%02d' "$n")"
-
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
-          git tag -a -m "Version $new_tag" "$new_tag"
-          git push origin tag "$new_tag"
-          echo "tag_name=$new_tag" >> "$GITHUB_OUTPUT"
+          git tag -f -a -m "Version $TAG" "$TAG"
+          git push --force origin "refs/tags/$TAG"
+          echo "tag_name=$TAG" >> "$GITHUB_OUTPUT"
+          echo "build_id=$(git rev-parse --short=7 "${TAG}^{commit}")" >> "$GITHUB_OUTPUT"
 
   build-engine:
     needs: get-tag
@@ -204,22 +179,24 @@ jobs:
         run: |
           set -euo pipefail
           tag="${{ needs.get-tag.outputs.tag_name }}"
+          buildId="${{ needs.get-tag.outputs.build_id }}"
+          engineFolder="unrecoil_${tag}-${buildId}-unrecoil"
 
           cat > latest.json <<EOF
           {
             "version": "${tag}",
-            "engine": "unrecoil_${tag}-unrecoil",
+            "engine": "${engineFolder}",
             "resources": [
               {
                 "platform": "linux",
                 "url": "https://github.com/PrivacyIsARight/unrecoil/releases/download/${tag}/unrecoil_${tag}_amd64-linux.7z",
-                "destination": "engine/unrecoil_${tag}-unrecoil",
+                "destination": "engine/${engineFolder}",
                 "extract": true
               },
               {
                 "platform": "win32",
                 "url": "https://github.com/PrivacyIsARight/unrecoil/releases/download/${tag}/unrecoil_${tag}_amd64-windows.7z",
-                "destination": "engine/unrecoil_${tag}-unrecoil",
+                "destination": "engine/${engineFolder}",
                 "extract": true
               }
             ]
@@ -233,6 +210,6 @@ jobs:
             echo "latest.json is already up to date."
             exit 0
           fi
-          git commit -s -m "Update latest.json to ${tag}" latest.json
+          git commit -s -m "Update latest.json to ${tag} (${buildId})" latest.json
           git pull --rebase origin master
           git push origin HEAD:master
