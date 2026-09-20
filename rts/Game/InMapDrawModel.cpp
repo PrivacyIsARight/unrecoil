@@ -45,28 +45,14 @@ CInMapDrawModel::CInMapDrawModel()
 bool CInMapDrawModel::MapDrawPrimitive::IsVisibleToPlayer(bool drawAllMarks) const
 {
 	RECOIL_DETAILED_TRACY_ZONE;
-	const int allyTeam = teamHandler.AllyTeam(teamID);
-
-	const bool alliedAB = teamHandler.Ally(allyTeam, gu->myAllyTeam);
-	const bool alliedBA = teamHandler.Ally(gu->myAllyTeam, allyTeam);
-
-	return (gu->spectating || drawAllMarks || (!spectator && alliedAB && alliedBA));
+	return true;
 }
 
 
 bool CInMapDrawModel::AllowedMsg(const CPlayer* sender) const
 {
 	RECOIL_DETAILED_TRACY_ZONE;
-	const int  allyTeam  = teamHandler.AllyTeam(sender->team);
-
-	const bool alliedAB = teamHandler.Ally(allyTeam, gu->myAllyTeam);
-	const bool alliedBA = teamHandler.Ally(gu->myAllyTeam, allyTeam);
-	const bool alliedMsg = alliedAB && alliedBA;
-
-	// if we are playing and the guy sending the message is
-	// a spectator (or not an ally), we can not just ignore
-	// it due to drawAllMarks mode considerations
-	return (gu->spectating || (!sender->spectator && alliedMsg));
+	return true;
 }
 
 
