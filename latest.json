@@ -1,17 +1,17 @@
 {
   "version": "2026.07.04",
-  "engine": "unrecoil_2026.07.04-07bf1d0-unrecoil",
+  "engine": "2026.07.04",
   "resources": [
     {
       "platform": "linux",
       "url": "https://github.com/PrivacyIsARight/unrecoil/releases/download/2026.07.04/unrecoil_2026.07.04_amd64-linux.7z",
-      "destination": "engine/unrecoil_2026.07.04-07bf1d0-unrecoil",
+      "destination": "engine/2026.07.04",
       "extract": true
     },
     {
       "platform": "win32",
       "url": "https://github.com/PrivacyIsARight/unrecoil/releases/download/2026.07.04/unrecoil_2026.07.04_amd64-windows.7z",
-      "destination": "engine/unrecoil_2026.07.04-07bf1d0-unrecoil",
+      "destination": "engine/2026.07.04",
       "extract": true
     }
   ]

@@ -180,7 +180,7 @@ jobs:
           set -euo pipefail
           tag="${{ needs.get-tag.outputs.tag_name }}"
           buildId="${{ needs.get-tag.outputs.build_id }}"
-          engineFolder="unrecoil_${tag}-${buildId}-unrecoil"
+          engineFolder="${tag}"
 
           cat > latest.json <<EOF
           {
