@@ -7771,9 +7771,6 @@ int LuaSyncedCtrl::SpawnSFX(lua_State* L)
  */
 int LuaSyncedCtrl::SetNoPause(lua_State* L)
 {
-	if (!FullCtrl(L))
-		return 0;
-
 	// Important: only works in server mode, has no effect in client mode
 	if (gameServer != nullptr)
 		gameServer->SetGamePausable(!luaL_checkboolean(L, 1));
@@ -7798,17 +7795,15 @@ int LuaSyncedCtrl::SetExperienceGrade(lua_State* L)
 
 	globalUnitParams.expGrade = luaL_checkfloat(L, 1);
 
-	// NOTE: for testing, should be using modrules.tdf
-	if (gs->cheatEnabled) {
-		if (lua_isnumber(L, 2))
-			globalUnitParams.expPowerScale = lua_tofloat(L, 2);
+	if (lua_isnumber(L, 2))
+		globalUnitParams.expPowerScale = lua_tofloat(L, 2);
 
-		if (lua_isnumber(L, 3))
-			globalUnitParams.expHealthScale = lua_tofloat(L, 3);
+	if (lua_isnumber(L, 3))
+		globalUnitParams.expHealthScale = lua_tofloat(L, 3);
 
-		if (lua_isnumber(L, 4))
-			globalUnitParams.expReloadScale = lua_tofloat(L, 4);
-	}
+	if (lua_isnumber(L, 4))
+		globalUnitParams.expReloadScale = lua_tofloat(L, 4);
+
 	return 0;
 }
 

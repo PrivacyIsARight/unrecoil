@@ -158,8 +158,6 @@ CSelectedUnitsHandler::AvailableCommandsStruct CSelectedUnitsHandler::GetAvailab
 void CSelectedUnitsHandler::GiveCommand(const Command& c, bool fromUser)
 {
 	RECOIL_DETAILED_TRACY_ZONE;
-	if (gu->spectating && gs->godMode == 0)
-		return;
 	if (selectedUnits.empty())
 		return;
 

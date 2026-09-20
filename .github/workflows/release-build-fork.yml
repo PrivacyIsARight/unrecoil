@@ -83,28 +83,56 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          # The get-tag job guarantees an exact annotated tag at the commit we
+          # build, so pin the checkout to it explicitly. The submodules are
+          # fetched shallowly: nothing in the build reads their history (at most
+          # mimalloc's optional git-describe define is omitted), so fetching the
+          # pinned commits only is a large clone-time saving with identical trees.
+          ref: ${{ needs.get-tag.outputs.tag_name }}
           fetch-depth: 0
           fetch-tags: true
           submodules: recursive
+          shallow-submodules: true
           path: src
 
-      - name: Ensure clean detached checkout at tagged commit
+      - name: Verify clean detached checkout at tagged commit
         run: |
-          git -C src fetch --tags --force
+          set -euo pipefail
           git -C src checkout --detach HEAD
+          actual="$(git -C src describe --exact-match --tags HEAD)"
+          expected="${{ needs.get-tag.outputs.tag_name }}"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::Expected checkout at tag ${expected}, got ${actual}"
+            exit 1
+          fi
+
+      - name: Restore ccache
+        id: ccache
+        uses: actions/cache@v4
+        with:
+          # The builder images bake in ccache (CMAKE_CXX_COMPILER_LAUNCHER) with
+          # its cache_dir at /build/cache. Persisting that directory across runs
+          # turns the multi-hour cold build into an incremental one. The save
+          # happens automatically at the end of the job.
+          path: cache
+          key: unrecoil-ccache-${{ matrix.system.target }}
 
       - name: Build engine
         env:
           IMAGE: ghcr.io/beyond-all-reason/recoil-build-${{ matrix.system.target }}
           DIGEST: ${{ matrix.system.image_digest }}
+          # Keep the on-disk cache comfortably below the 10GB actions/cache
+          # per-key limit (the image default is 10G).
+          CCACHE_MAXSIZE: 4G
         run: |
-          mkdir -p artifacts
+          mkdir -p artifacts cache
           docker pull "$IMAGE@$DIGEST"
           docker run -i --rm \
             -v /etc/passwd:/etc/passwd:ro \
             -v /etc/group:/etc/group:ro \
             --user="$(id -u):$(id -g)" \
             -v "$(pwd)/src:/build/src:ro" \
+            -v "$(pwd)/cache:/build/cache:rw" \
             -v "$(pwd)/artifacts:/build/artifacts:rw" \
             "$IMAGE@$DIGEST" \
             bash <<'EOF'
@@ -114,6 +142,7 @@ jobs:
           ./compile.sh
           ${{ inputs.split-debug-info && './split-debug-info.sh' || 'echo "Not splitting debug info."' }}
           ./package.sh
+          ccache --show-stats || true
           EOF
 
       - name: Upload engine artifact

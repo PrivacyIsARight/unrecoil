@@ -818,12 +818,6 @@ public:
 	}
 
 	bool Execute(const UnsyncedAction& action) const final {
-		const CPlayer* fromPlayer     = playerHandler.Player(gu->myPlayerNum);
-		const int      fromTeamId     = (fromPlayer != nullptr) ? fromPlayer->team : -1;
-
-		const bool cheating           = gs->cheatEnabled;
-		const bool singlePlayer       = (playerHandler.ActivePlayers() <= 1);
-
 		std::vector<std::string> args = CSimpleParser::Tokenize(action.GetArgs());
 		const std::string actionName  = StringToLower(GetCommand()).substr(2);
 
@@ -877,18 +871,6 @@ public:
 			return WrongSyntax();
 		}
 
-		{
-			const bool weAreAllied  = teamHandler.AlliedTeams(fromTeamId, teamToKillId);
-			const bool weAreAIHost  = (skirmishAIHandler.GetSkirmishAI(skirmishAIId)->hostPlayer == gu->myPlayerNum);
-			const bool weAreLeader  = (teamToKill->GetLeader() == gu->myPlayerNum);
-
-			if (!(weAreAIHost || weAreLeader || singlePlayer || (weAreAllied && cheating))) {
-				LOG_L(L_WARNING, "Team to %s: player %s is not allowed to %s Skirmish AI controlling team %i (try with /cheat)",
-						actionName.c_str(), fromPlayer->name.c_str(), actionName.c_str(), teamToKillId);
-				return WrongSyntax();
-			}
-		}
-
 		if (teamToKill->isDead) {
 			LOG_L(L_WARNING, "Team to %s: is a dead team already: %i", actionName.c_str(), teamToKillId);
 			return WrongSyntax();
@@ -937,14 +919,6 @@ public:
 	}
 
 	bool Execute(const UnsyncedAction& action) const final {
-		bool badArgs = false;
-
-		const CPlayer* fromPlayer     = playerHandler.Player(gu->myPlayerNum);
-		const int      fromTeamId     = (fromPlayer != nullptr) ? fromPlayer->team : -1;
-
-		const bool cheating           = gs->cheatEnabled;
-		const bool singlePlayer       = (playerHandler.ActivePlayers() <= 1);
-
 		std::vector<std::string> args = CSimpleParser::Tokenize(action.GetArgs());
 
 		if (args.size() < 2) {
@@ -1228,9 +1202,6 @@ public:
 	}
 
 	bool Execute(const UnsyncedAction& action) const final {
-		if (gu->spectating)
-			return false;
-
 		if (gameSetup->fixedAllies) {
 			LOG_L(L_WARNING, "In-game alliances are not allowed");
 			return true;
@@ -1775,9 +1746,6 @@ public:
 	}
 
 	bool Execute(const UnsyncedAction& action) const final {
-		if (gameServer == nullptr)
-			return false;
-
 		int speedCtrl = game->speedControl;
 
 		if (action.GetArgs().empty()) {
@@ -1789,7 +1757,9 @@ public:
 		}
 
 		// constrain to bounds
-		gameServer->UpdateSpeedControl(game->speedControl = speedCtrl);
+		game->speedControl = speedCtrl;
+		if (gameServer != nullptr)
+			gameServer->UpdateSpeedControl(speedCtrl);
 		return true;
 	}
 };
@@ -2119,9 +2089,6 @@ public:
 	}
 
 	bool Execute(const UnsyncedAction& action) const final {
-		if (gu->spectating)
-			return false;
-
 		// we must cause the to-be-controllee to be put in
 		// netSelected[myPlayerNum] by giving it an order
 		selectedUnitsHandler.SendCommand(Command(CMD_STOP));
@@ -2358,9 +2325,6 @@ public:
 	}
 
 	bool Execute(const UnsyncedAction& action) const final {
-		if (gu->spectating)
-			return false;
-
 		// already shown?
 		const auto& inputReceivers = CInputReceiver::GetReceivers();
 

@@ -215,7 +215,6 @@ private:
 	std::array<           spring_time           , MAX_PLAYERS> netPingTimings; // throttles NETMSG_PING
 	std::array< std::pair<spring_time, uint32_t>, MAX_PLAYERS> mapDrawTimings; // throttles NETMSG_MAPDRAW
 	std::array< std::pair<       bool,     bool>, MAX_PLAYERS> chatMutedFlags; // blocks NETMSG_{CHAT,DRAW}
-	std::array<                            bool , MAX_PLAYERS> aiControlFlags; // blocks NETMSG_AI_CREATED (aicontrol)
 
 	// std::map<asio::ip::udp::endpoint, int> rejectedConnections;
 	std::map<std::string, int> rejectedConnections;

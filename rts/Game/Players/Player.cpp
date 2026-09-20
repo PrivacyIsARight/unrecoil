@@ -72,9 +72,6 @@ void CPlayer::SetControlledTeams()
 		return;
 	}
 
-	if (spectator)
-		return;
-
 	// my team
 	controlledTeams.insert(team);
 }

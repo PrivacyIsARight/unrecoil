@@ -16,9 +16,7 @@
 void DumpHistory(nowide::fstream& file, int frameNum, bool serverRequest)
 {
 #ifdef SYNC_HISTORY
-	if (!gs->cheatEnabled && !serverRequest)
-		return;
-
+	(void)serverRequest;
 	if (frameNum < gs->frameNum - MAX_SYNC_HISTORY_FRAMES) {
 		LOG("[%s] request for history beyond history limit (%d)", __func__, frameNum);
 		return;

@@ -122,7 +122,7 @@ public:
 	*
 	* Whether editing of unit-, feature- and weapon-defs through Lua is enabled.
 	*/
-	bool editDefsEnabled = false;
+	bool editDefsEnabled = true;
 
 	/**
 	* @brief LuaGaia control

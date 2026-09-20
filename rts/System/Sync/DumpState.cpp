@@ -211,8 +211,6 @@ void DumpState(int newMinFrameNum, int newMaxFrameNum, int newFramePeriod, std::
 	const int oldMinFrameNum = gMinFrameNum;
 	const int oldMaxFrameNum = gMaxFrameNum;
 
-	if (!gs->cheatEnabled && !serverRequest)
-		return;
 	// check if the range is valid
 	if (newMaxFrameNum < newMinFrameNum)
 		return;
@@ -835,8 +833,6 @@ void DumpRNG(int newMinFrameNum, int newMaxFrameNum)
 	const int oldMinFrameNum = gMinFrameNum;
 	const int oldMaxFrameNum = gMaxFrameNum;
 
-	if (!gs->cheatEnabled)
-		return;
 	// check if the range is valid
 	if (newMaxFrameNum < newMinFrameNum)
 		return;

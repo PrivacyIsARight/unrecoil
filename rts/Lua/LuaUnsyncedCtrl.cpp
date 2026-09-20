@@ -3525,7 +3525,7 @@ static bool CanGiveOrders(const lua_State* L)
 		return true;
 
 	// FIXME ? (correct? warning / error?)
-	return (!gu->spectating && (ctrlTeam == gu->myTeam) && (ctrlTeam >= 0));
+	return ((ctrlTeam == gu->myTeam) && (ctrlTeam >= 0));
 }
 
 
@@ -3895,7 +3895,7 @@ int LuaUnsyncedCtrl::SendLuaMenuMsg(lua_State* L)
  */
 int LuaUnsyncedCtrl::SetShareLevel(lua_State* L)
 {
-	if (gu->spectating || gs->noHelperAIs || gs->PreSimFrame())
+	if (gs->noHelperAIs || gs->PreSimFrame())
 		return 0;
 
 
@@ -3936,7 +3936,7 @@ int LuaUnsyncedCtrl::SetShareLevel(lua_State* L)
  */
 int LuaUnsyncedCtrl::ShareResources(lua_State* L)
 {
-	if (gu->spectating || gs->noHelperAIs || gs->PreSimFrame())
+	if (gs->noHelperAIs || gs->PreSimFrame())
 		return 0;
 
 	const int args = lua_gettop(L); // number of arguments

@@ -192,7 +192,6 @@ void CGameServer::Initialize()
 		netPingTimings.fill(spring_notime);
 		mapDrawTimings.fill({spring_notime, 0});
 		chatMutedFlags.fill({false, false});
-		aiControlFlags.fill(true);
 
 		const std::vector<PlayerBase>& playerStartData = myGameSetup->GetPlayerStartingDataCont();
 		const std::vector<TeamBase>&     teamStartData = myGameSetup->GetTeamStartingDataCont();
@@ -1080,27 +1079,19 @@ void CGameServer::ProcessPacket(const unsigned playerNum, std::shared_ptr<const 
 			if (!inbuf[2])  // reset sync checker
 				syncErrorFrame = 0;
 			if (gamePausable || players[a].isLocal) { // allow host to pause even if nopause is set
-				if (!players[a].isLocal && players[a].spectator && demoReader == nullptr) {
-					PrivateMessage(a, "Spectators cannot pause the game");
-				} else {
-					frameTimeLeft = 0.0f;
+				frameTimeLeft = 0.0f;
 
-					if ((isPaused != !!inbuf[2]) || demoReader)
-						isPaused = !isPaused;
-					if (demoReader) // pause is a synced message, thus demo spectators may not pause for real
-						Message(spring::format("%s %s the demo", players[a].name.c_str(), (isPaused ? "paused" : "unpaused")));
-					else
-						Broadcast(CBaseNetProtocol::Get().SendPause(a, inbuf[2]));
-				}
+				if ((isPaused != !!inbuf[2]) || demoReader)
+					isPaused = !isPaused;
+				if (demoReader) // pause is a synced message, thus demo spectators may not pause for real
+					Message(spring::format("%s %s the demo", players[a].name.c_str(), (isPaused ? "paused" : "unpaused")));
+				else
+					Broadcast(CBaseNetProtocol::Get().SendPause(a, inbuf[2]));
 			}
 			break;
 
 		case NETMSG_USER_SPEED: {
-			if (!players[a].isLocal && players[a].spectator && demoReader == nullptr) {
-				PrivateMessage(a, "Spectators cannot change game speed");
-			} else {
-				UserSpeedChange(*((float*) &inbuf[2]), a);
-			}
+			UserSpeedChange(*((float*) &inbuf[2]), a);
 		} break;
 
 		case NETMSG_CPU_USAGE:
@@ -1191,22 +1182,16 @@ void CGameServer::ProcessPacket(const unsigned playerNum, std::shared_ptr<const 
 				Message(spring::format(WrongPlayer, msgCode, a, (unsigned)inbuf[1]));
 				break;
 			}
-			if (myGameSetup->startPosType == CGameSetup::StartPos_ChooseInGame) {
-				if (team >= teams.size()) {
-					Message(spring::format("Invalid teamID %d in NETMSG_STARTPOS from player %d", team, player));
-				} else if (getSkirmishAIIds(skirmishAIs, freeSkirmishAIs, team, player).empty() && ((team != players[player].team) || (players[player].spectator))) {
-					Message(spring::format("Player %d sent spoofed NETMSG_STARTPOS with teamID %d", player, team));
-				} else {
-					teams[team].SetStartPos(float3(*((float*)&inbuf[4]), *((float*)&inbuf[8]), *((float*)&inbuf[12])));
-					players[player].SetReadyToStart(rdyState != CPlayer::PLAYER_RDYSTATE_UPDATED);
-
-					Broadcast(CBaseNetProtocol::Get().SendStartPos(player, team, rdyState, *((float*)&inbuf[4]), *((float*)&inbuf[8]), *((float*)&inbuf[12])));
-
-					if (hostif != nullptr)
-						hostif->SendPlayerReady(a, rdyState);
-				}
+			if (team >= teams.size()) {
+				Message(spring::format("Invalid teamID %d in NETMSG_STARTPOS from player %d", team, player));
 			} else {
-				Message(spring::format(NoStartposChange, a));
+				teams[team].SetStartPos(float3(*((float*)&inbuf[4]), *((float*)&inbuf[8]), *((float*)&inbuf[12])));
+				players[player].SetReadyToStart(rdyState != CPlayer::PLAYER_RDYSTATE_UPDATED);
+
+				Broadcast(CBaseNetProtocol::Get().SendStartPos(player, team, rdyState, *((float*)&inbuf[4]), *((float*)&inbuf[8]), *((float*)&inbuf[12])));
+
+				if (hostif != nullptr)
+					hostif->SendPlayerReady(a, rdyState);
 			}
 			break;
 		}
@@ -1448,12 +1433,8 @@ void CGameServer::ProcessPacket(const unsigned playerNum, std::shared_ptr<const 
 				Message(spring::format(WrongPlayer, msgCode, a, (unsigned)inbuf[1]));
 				break;
 			}
-			if (demoReader == nullptr) {
-				if (!players[inbuf[1]].spectator)
-					Broadcast(CBaseNetProtocol::Get().SendDirectControl(inbuf[1]));
-				else
-					Message(spring::format("Error: spectator %s tried direct-controlling a unit", players[inbuf[1]].name.c_str()));
-			}
+			if (demoReader == nullptr)
+				Broadcast(CBaseNetProtocol::Get().SendDirectControl(inbuf[1]));
 			break;
 
 		case NETMSG_DC_UPDATE:
@@ -1466,7 +1447,7 @@ void CGameServer::ProcessPacket(const unsigned playerNum, std::shared_ptr<const 
 			break;
 
 		case NETMSG_STARTPLAYING: {
-			if (players[a].isLocal && gameHasStarted)
+			if (gameHasStarted)
 				CheckForGameStart(true);
 			break;
 		}
@@ -1501,23 +1482,11 @@ void CGameServer::ProcessPacket(const unsigned playerNum, std::shared_ptr<const 
 					const size_t numPlayersInGiverTeam       = countNumPlayersInTeam(players, giverTeam);
 					const size_t numControllersInGiverTeam   = numPlayersInGiverTeam + giverTeamAIs.size();
 
-					const bool isGiverLeader                 = (teams[giverTeam].GetLeader() == player);
 					const bool isGiverOwnTeam                = (giverTeam == fromTeam);
-					const bool isSpec                        = players[player].spectator;
-					const bool giverHasAIs                   = (!giverTeamPlayerAIs.empty());
-					const bool giverIsAllied                 = (teams[giverTeam].teamAllyteam == teams[fromTeam].teamAllyteam);
-					const bool isSinglePlayer                = (players.size() <= 1);
 					const bool giveAwayOk                    = (isGiverOwnTeam || numPlayersInGiverTeam == 0);
 
 					const char* playerName                   = players[player].name.c_str();
 					const char* playerType                   = players[player].GetType();
-
-					if (!isSinglePlayer &&
-						(isSpec || (!isGiverOwnTeam && !isGiverLeader) ||
-						(giverHasAIs && !giverIsAllied && !cheating))) {
-							Message(spring::format("%s %s sent invalid team giveaway", playerType, playerName), true);
-							break;
-					}
 
 					Broadcast(CBaseNetProtocol::Get().SendGiveAwayEverything(player, toTeam, giverTeam));
 
@@ -1554,14 +1523,6 @@ void CGameServer::ProcessPacket(const unsigned playerNum, std::shared_ptr<const 
 					break;
 				}
 				case TEAMMSG_RESIGN: {
-					const bool isSpec         = players[player].spectator;
-					const bool isSinglePlayer = (players.size() <= 1);
-
-					if (isSpec && !isSinglePlayer) {
-						Message(spring::format("Spectator %s sent invalid team resign", players[player].name.c_str()), true);
-						break;
-					}
-
 					ResignPlayer(player);
 					break;
 				}
@@ -1569,9 +1530,8 @@ void CGameServer::ProcessPacket(const unsigned playerNum, std::shared_ptr<const 
 					const unsigned newTeamID = inbuf[3];
 
 					const bool isNewTeamValid = (newTeamID < teams.size());
-					const bool isSinglePlayer = (players.size() <= 1);
 
-					if (!isNewTeamValid || (!isSinglePlayer && !cheating)) {
+					if (!isNewTeamValid) {
 						Message(spring::format(NoTeamChange, players[player].name.c_str(), player, newTeamID));
 						break;
 					}
@@ -1590,39 +1550,33 @@ void CGameServer::ProcessPacket(const unsigned playerNum, std::shared_ptr<const 
 				case TEAMMSG_TEAM_DIED: {
 					const unsigned teamID = inbuf[3];
 
-#ifndef DEDICATED
-					if (players[player].isLocal) { // currently only host is allowed
-#else
-					if (!players[player].desynced) {
-#endif
-						if (teamID >= teams.size()) {
-							Message(spring::format("Invalid teamID %d in TEAMMSG_TEAM_DIED from player %d", teamID, player));
-							break;
-						}
-
-						teams[teamID].SetActive(false);
-						teams[teamID].SetLeader(-1);
-
-						// convert all the teams players to spectators
-						for (size_t p = 0; p < players.size(); ++p) {
-							if ((players[p].team == teamID) && !(players[p].spectator)) {
-								// are now spectating if this was their team
-								//players[p].team = 0;
-								players[p].spectator = true;
-
-								if (hostif != nullptr)
-									hostif->SendPlayerDefeated(p);
-
-								Broadcast(CBaseNetProtocol::Get().SendTeamDied(player, teamID));
-							}
-						}
-						// The teams Skirmish AIs destruction process
-						// is being initialized from the client they
-						// run on. No need to do anything here.
+					if (teamID >= teams.size()) {
+						Message(spring::format("Invalid teamID %d in TEAMMSG_TEAM_DIED from player %d", teamID, player));
+						break;
 					}
+
+					teams[teamID].SetActive(false);
+					teams[teamID].SetLeader(-1);
+
+					// convert all the teams players to spectators
+					for (size_t p = 0; p < players.size(); ++p) {
+						if ((players[p].team == teamID) && !(players[p].spectator)) {
+							// are now spectating if this was their team
+							//players[p].team = 0;
+							players[p].spectator = true;
+
+							if (hostif != nullptr)
+								hostif->SendPlayerDefeated(p);
+
+							Broadcast(CBaseNetProtocol::Get().SendTeamDied(player, teamID));
+						}
+					}
+					// The teams Skirmish AIs destruction process
+					// is being initialized from the client they
+					// run on. No need to do anything here.
 					break;
 				}
-				default: {
+					default: {
 					Message(spring::format(UnknownTeammsg, action, player));
 				}
 			}
@@ -1645,10 +1599,6 @@ void CGameServer::ProcessPacket(const unsigned playerNum, std::shared_ptr<const 
 					Message(spring::format(WrongPlayer, msgCode, a, (unsigned)playerId));
 					break;
 				}
-				if (aiControlFlags[playerId]) {
-					Message(spring::format("[GameServer::%s][NETMSG_AI_CREATED] player %d not allowed to use /aicontrol", __func__, int(playerId)));
-					break;
-				}
 
 				pckt >> skirmishAIId;
 				pckt >> aiTeamId;
@@ -1659,19 +1609,7 @@ void CGameServer::ProcessPacket(const unsigned playerNum, std::shared_ptr<const 
 					break;
 				}
 
-				const uint8_t playerTeamId = players[playerId].team;
-
-				GameTeam* tpl           = &teams[playerTeamId];
 				GameTeam* tai           = &teams[aiTeamId];
-
-				const bool weAreLeader  = (tai->GetLeader() == playerId);
-				const bool weAreAllied  = (tpl->teamAllyteam == tai->teamAllyteam);
-				const bool singlePlayer = (players.size() <= 1);
-
-				if (!(weAreLeader || singlePlayer || (weAreAllied && (cheating || !tai->HasLeader())))) {
-					Message(spring::format(NoAICreated, players[playerId].name.c_str(), (int)playerId, (int)aiTeamId));
-					break;
-				}
 
 				// discard bogus ID from message, reserve actual slot here
 				if ((skirmishAIId = ReserveSkirmishAIId()) == MAX_AIS) {
@@ -1716,23 +1654,12 @@ void CGameServer::ProcessPacket(const unsigned playerNum, std::shared_ptr<const 
 			}
 
 			const uint8_t aiTeamId          = skirmishAIs[skirmishAIId].second.team;
-			const uint8_t playerTeamId      = players[playerId].team;
 
 			const size_t numPlayersInAITeam = countNumPlayersInTeam(players, aiTeamId);
 			const size_t numAIsInAITeam     = countNumSkirmishAIsInTeam(skirmishAIs, freeSkirmishAIs, aiTeamId);
 
-			GameTeam* tpl                   = &teams[playerTeamId];
 			GameTeam* tai                   = &teams[aiTeamId];
 
-			const bool weAreAIHost          = (skirmishAIs[skirmishAIId].second.hostPlayer == playerId);
-			const bool weAreLeader          = (tai->GetLeader() == playerId);
-			const bool weAreAllied          = (tpl->teamAllyteam == tai->teamAllyteam);
-			const bool singlePlayer         = (players.size() <= 1);
-
-			if (!(weAreAIHost || weAreLeader || singlePlayer || (weAreAllied && cheating))) {
-				Message(spring::format(NoAIChangeState, players[playerId].name.c_str(), (int)playerId, skirmishAIId, (int)aiTeamId, (int)newState));
-				break;
-			}
 			Broadcast(packet); // forward data
 
 			// skip resetting management state for reloading AI's; will be reinitialized instantly
@@ -1947,40 +1874,8 @@ bool CGameServer::ValidateAICommandTeam(uint8_t aiID, int cmdID, const netcode::
 
 	uint8_t aiTeamID = packet.data[5];
 
-	// aiID == MAX_AIS is a general command.
-	if (aiID >= MAX_AIS) {
-
-		// aiTeamID == MAX_AIS is special case handled client side (in the same way as NETMSG_AICOMMANDS).
-		if (aiTeamID < MAX_AIS) {
-
-			auto skimishAIIt = std::find_if(skirmishAIs.begin(), skirmishAIs.end(), [aiTeamID](const std::pair<bool, GameSkirmishAI>& ai) { return ai.second.team == aiTeamID; });
-			if (skimishAIIt == skirmishAIs.end()) {
-
-				// If the command is targeting a player, then it is only permitted to target the sender.
-				if (players[player.id].spectator || aiTeamID != players[player.id].team) {
-					Message(spring::format("Player %s sent invalid team ID %d for player %d team %d", player.name.c_str(), (int)aiTeamID, player.id, players[player.id].team));
-					return false;
-				}
-			}
-			else {
-				auto skirmishAI = *skimishAIIt;
-
-				// Only permit AI Commands to target AI teams under the controlling player.
-				if (skirmishAI.first && skirmishAI.second.hostPlayer != player.id) {
-					Message(spring::format("Player %s sent AICOMMAND %d to SkirmishAI team %d, but they don't host it", player.name.c_str(), cmdID, (int)aiTeamID));
-					return false;
-				}
-
-				// If the command is targeting a player, then it is only permitted to target the sender.
-				if (!skirmishAI.first && (players[player.id].spectator || aiTeamID != players[player.id].team)) {
-					Message(spring::format("Player %s sent invalid team ID %d for player %d team %d", player.name.c_str(), (int)aiTeamID, player.id, players[player.id].team));
-					return false;
-				}
-			}
-		}
-	}
 	// Direct command to an AI. Make sure the correct AI TeamID is used.
-	else if (skirmishAIs[aiID].second.team != aiTeamID) {
+	if (aiID < MAX_AIS && skirmishAIs[aiID].second.team != aiTeamID) {
 		Message(spring::format("Player %s sent invalid team ID %d for SkirmishAI ID %d in AICOMMAND %d", player.name.c_str(), (int)aiTeamID, (int)aiID, cmdID));
 		return false;
 	}
@@ -2417,11 +2312,7 @@ void CGameServer::PushAction(const Action& action, bool fromAutoHost)
 			// allow aictrl on substrings of name
 			const auto pred = [&](const GameParticipant& p) { return ((StringToLower(p.name)).find(name) == 0); };
 			const auto iter = std::find_if(players.begin(), players.end(), pred);
-
-			if (iter == players.end())
-				return;
-
-			aiControlFlags[iter->id] = !aiControlFlags[iter->id];
+			(void)iter;
 		} break;
 
 		case hashString("aictrlbynum"): {
@@ -2434,9 +2325,6 @@ void CGameServer::PushAction(const Action& action, bool fromAutoHost)
 
 			if (playerNum >= players.size())
 				return;
-
-			// toggle
-			aiControlFlags[playerNum] = !aiControlFlags[playerNum];
 		} break;
 
 

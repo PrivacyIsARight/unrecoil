@@ -26,16 +26,12 @@ const std::string PlayerJoined = "%s %s finished loading and is now ingame";
 const std::string PlayerLeft = "%s %s left the game: %s";
 const std::string PlayerResigned = "Player %s resigned from the game: %s";
 
-const std::string NoStartposChange = "%s tried to change his startposition illegally";
 const std::string NoHelperAI = "%s (%d) is using a helper AI illegally";
 const std::string NoTeamChange = "%s (%d) tried to change to non-existent team %d";
-const std::string NoAICreated = "%s (%d) tried to control team %i with an AI illegally";
 const std::string NoAIChangeState = "%s (%d) tried to change the state of an AI (%i) controlling team %i to state %i illegally";
 
 const std::string UnknownTeammsg = "Unknown action in NETMSG_TEAM (%d) from player %d";
 const std::string UnknownNetmsg = "Unhandled net msg (%d) in server from %d";
-
-const std::string CommandNotAllowed = "Player %d is not allowed to execute command %s";
 
 const std::string UncontrolledPlayerName = "Uncontrolled";
 const std::string UnnamedPlayerName = "UnnamedPlayer";

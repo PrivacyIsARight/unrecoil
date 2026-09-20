@@ -250,10 +250,9 @@ void CLuaUI::UpdateTeams()
 		return;
 
 	const bool allAccessCtrl = (gs->godMode == GODMODE_MAX_VAL);
-	const bool  noAccessCtrl = (gs->godMode == 0 && gu->spectating);
 
 	luaUI->SetFullCtrl(allAccessCtrl);
-	luaUI->SetCtrlTeam(allAccessCtrl ? AllAccessTeam : (noAccessCtrl ? NoAccessTeam : gu->myTeam));
+	luaUI->SetCtrlTeam(allAccessCtrl ? AllAccessTeam : gu->myTeam);
 	luaUI->SetFullRead(gu->spectatingFullView);
 	luaUI->SetReadTeam(luaUI->GetFullRead() ? AllAccessTeam : gu->myTeam);
 	luaUI->SetReadAllyTeam(luaUI->GetFullRead() ? AllAccessTeam : gu->myAllyTeam);

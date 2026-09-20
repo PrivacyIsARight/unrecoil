@@ -80,7 +80,7 @@ void CGlobalSynced::ResetState() {
 	paused          = false;
 	cheatEnabled    = false;
 	noHelperAIs     = false;
-	editDefsEnabled = false;
+	editDefsEnabled = true;
 	useLuaGaia      = true;
 
 	gsRNG.SetSeed(18655, true);

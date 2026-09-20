@@ -2111,11 +2111,6 @@ void CGame::DrawSkip(bool blackscreen) {
 void CGame::ReloadCOB(const string& msg, int player)
 {
 	RECOIL_DETAILED_TRACY_ZONE;
-	if (!gs->cheatEnabled) {
-		LOG_L(L_WARNING, "[Game::%s] can only be used if cheating is enabled", __func__);
-		return;
-	}
-
 	if (msg.empty()) {
 		LOG_L(L_WARNING, "[Game::%s] missing UnitDef name", __func__);
 		return;
