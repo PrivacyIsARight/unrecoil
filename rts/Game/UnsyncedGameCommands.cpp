@@ -1152,9 +1152,6 @@ public:
 	}
 
 	bool Execute(const UnsyncedAction& action) const final {
-		if (!gu->spectating)
-			return false;
-
 		const int oldMode =
 			(gu->spectatingFullView   ? 1 : 0) +
 			(gu->spectatingFullSelect ? 2 : 0);

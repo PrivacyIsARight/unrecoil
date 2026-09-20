@@ -76,8 +76,8 @@ void CGlobalUnsynced::ResetState()
 	myPlayingAllyTeam = -1;
 
 	spectating           = false;
-	spectatingFullView   = false;
-	spectatingFullSelect = false;
+	spectatingFullView   = true;
+	spectatingFullSelect = true;
 
 	fpsMode = false;
 	globalQuit = false;
@@ -110,8 +110,8 @@ void CGlobalUnsynced::SetMyPlayer(const int myNumber)
 		throw content_error("Invalid MyAllyTeam in player setup");
 
 	spectating           = myPlayer->spectator;
-	spectatingFullView   = myPlayer->spectator;
-	spectatingFullSelect = myPlayer->spectator;
+	spectatingFullView   = true;
+	spectatingFullSelect = true;
 
 	if (spectating)
 		return;
